@@ -53,7 +53,7 @@ Files are automatically sorted into the following directories:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/org
+git clone https://github.com/ash2228/org
 ```
 
 2. Navigate to the project directory:
