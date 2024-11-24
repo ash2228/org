@@ -6,3 +6,6 @@ edition = "2021"
 [dependencies]
 rayon = "1.10.0"
 walkdir = "2.5.0"
+
+[profile.release]
+lto = true
