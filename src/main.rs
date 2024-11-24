@@ -1,146 +1,51 @@
-use std::{env, fs, sync::Arc, thread, time::Instant};
+use rayon::prelude::*;
+use std::{env, fs, time::Instant};
 use walkdir::WalkDir;
+
 fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() < 3 {
         println!("Usage: [unorganised folder] [organised folder]");
         return Ok(());
     }
-    let args = Arc::new(args.clone());
     let time = Instant::now();
     println!("Organizing Files...");
-    let paths = WalkDir::new(&args[1]).into_iter().filter_map(Result::ok);
-    let mut images = vec![];
-    let mut text = vec![];
-    let mut videos = vec![];
-    let mut misls = vec![];
-    let mut compressed = vec![];
-    let mut docs = vec![];
-    for path in paths {
+
+    let paths: Vec<_> = WalkDir::new(&args[1])
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|path| path.file_type().is_file())
+        .collect();
+
+    let output_dir = &args[2];
+    fs::create_dir_all(format!("{}/img", output_dir))?;
+    fs::create_dir_all(format!("{}/video", output_dir))?;
+    fs::create_dir_all(format!("{}/txt", output_dir))?;
+    fs::create_dir_all(format!("{}/compressed", output_dir))?;
+    fs::create_dir_all(format!("{}/miscellaneous", output_dir))?;
+
+    paths.into_par_iter().for_each(|path| {
         let entry = path.file_name().to_string_lossy();
-        if path.file_type().is_dir() {
-            continue;
-        }
-        if entry.ends_with("png")
+        let dest_dir = if entry.ends_with("png")
             || entry.ends_with("jpg")
             || entry.ends_with("jpeg")
             || entry.ends_with("webp")
         {
-            images.push(path.path().to_owned());
-            continue;
-        }
-        if entry.ends_with("txt") {
-            text.push(path.path().to_owned());
-            continue;
-        }
-        if entry.ends_with("mp4") || entry.ends_with("mkv") || entry.ends_with("mov") {
-            videos.push(path.path().to_owned());
-            continue;
-        }
-        if entry.ends_with("zip") || entry.ends_with("rar") || entry.ends_with("7z") {
-            compressed.push(path.path().to_owned());
-            continue;
-        }
-        if entry.ends_with("pdf") || entry.ends_with("html") || entry.ends_with("docx") {
-            docs.push(path.path().to_owned());
-            continue;
-        }
-        misls.push(path.path().to_owned());
-    }
-    match fs::remove_dir_all(&args[2]) {
-        Ok(_) => {}
-        Err(_) => {}
-    }
-    fs::create_dir(&args[2])?;
-    fs::create_dir(format!("{}/img", &args[2]))?;
-    fs::create_dir(format!("{}/video", &args[2]))?;
-    fs::create_dir(format!("{}/txt", &args[2]))?;
-    fs::create_dir(format!("{}/compressed", &args[2]))?;
-    fs::create_dir(format!("{}/miscellaneous", &args[2]))?;
-    let mut process = vec![];
-    for img in images {
-        process.push(thread::spawn({
-            let args = Arc::clone(&args);
-            move || {
-                fs::copy(
-                    img.to_string_lossy().to_string(),
-                    format!(
-                        "{}/img/{}",
-                        &args[2],
-                        img.file_name().unwrap().to_string_lossy()
-                    ),
-                )
-                .unwrap();
-            }
-        }));
-    }
-    for video in videos {
-        process.push(thread::spawn({
-            let args = Arc::clone(&args);
-            move || {
-                fs::copy(
-                    video.to_string_lossy().to_string(),
-                    format!(
-                        "{}/video/{}",
-                        &args[2],
-                        video.file_name().unwrap().to_string_lossy()
-                    ),
-                )
-                .unwrap();
-            }
-        }));
-    }
-    for txt in text {
-        process.push(thread::spawn({
-            let args = Arc::clone(&args);
-            move || {
-                fs::copy(
-                    txt.to_string_lossy().to_string(),
-                    format!(
-                        "{}/txt/{}",
-                        &args[2],
-                        txt.file_name().unwrap().to_string_lossy()
-                    ),
-                )
-                .unwrap();
-            }
-        }));
-    }
-    for misl in misls {
-        process.push(thread::spawn({
-            let args = Arc::clone(&args);
-            move || {
-                fs::copy(
-                    misl.to_string_lossy().to_string(),
-                    format!(
-                        "{}/miscellaneous/{}",
-                        &args[2],
-                        misl.file_name().unwrap().to_string_lossy()
-                    ),
-                )
-                .unwrap();
-            }
-        }));
-    }
-    for comp in compressed {
-        process.push(thread::spawn({
-            let args = Arc::clone(&args);
-            move || {
-                fs::copy(
-                    comp.to_string_lossy().to_string(),
-                    format!(
-                        "{}/compressed/{}",
-                        &args[2],
-                        comp.file_name().unwrap().to_string_lossy()
-                    ),
-                )
-                .unwrap();
-            }
-        }));
-    }
-    for pro in process {
-        pro.join().unwrap();
-    }
-    println!("operation completed in {:.2?}", time.elapsed());
+            "img"
+        } else if entry.ends_with("mp4") || entry.ends_with("mkv") || entry.ends_with("mov") {
+            "video"
+        } else if entry.ends_with("txt") {
+            "txt"
+        } else if entry.ends_with("zip") || entry.ends_with("rar") || entry.ends_with("7z") {
+            "compressed"
+        } else {
+            "miscellaneous"
+        };
+
+        let dest_path = format!("{}/{}/{}", output_dir, dest_dir, entry);
+        fs::copy(path.path(), dest_path).unwrap();
+    });
+
+    println!("Operation completed in {:.2?}", time.elapsed());
     Ok(())
 }
