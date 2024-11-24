@@ -139,6 +139,6 @@ fn main() -> std::io::Result<()> {
     for pro in process {
         pro.join().unwrap();
     }
-    println!("operation completed in {:2?}", time.elapsed());
+    println!("operation completed in {:.2?}", time.elapsed());
     Ok(())
 }
