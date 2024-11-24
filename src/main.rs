@@ -47,7 +47,6 @@ fn main() -> std::io::Result<()> {
         }
         misls.push(path.path().to_owned());
     }
-    println!("operation completed!");
     match fs::remove_dir_all(&args[2]) {
         Ok(_) => {}
         Err(_) => {}
