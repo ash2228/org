@@ -1,4 +1,5 @@
 use std::{env, fs, sync::Arc, thread, time::Instant};
+use walkdir::WalkDir;
 fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() < 3 {
@@ -8,7 +9,7 @@ fn main() -> std::io::Result<()> {
     let args = Arc::new(args.clone());
     let time = Instant::now();
     println!("Organizing Files...");
-    let paths = fs::read_dir(&args[1])?;
+    let paths = WalkDir::new(&args[1]).into_iter().filter_map(Result::ok);
     let mut images = vec![];
     let mut text = vec![];
     let mut videos = vec![];
@@ -16,37 +17,37 @@ fn main() -> std::io::Result<()> {
     let mut compressed = vec![];
     let mut docs = vec![];
     for path in paths {
-        let path = path?;
-        let entry = path
-            .file_name()
-            .into_string()
-            .expect("failed to convert to string");
+        let entry = path.file_name().to_string_lossy();
+        if path.file_type().is_dir() {
+            continue;
+        }
         if entry.ends_with("png")
             || entry.ends_with("jpg")
             || entry.ends_with("jpeg")
             || entry.ends_with("webp")
         {
-            images.push(path.path());
+            images.push(path.path().to_owned());
             continue;
         }
         if entry.ends_with("txt") {
-            text.push(path.path());
+            text.push(path.path().to_owned());
             continue;
         }
         if entry.ends_with("mp4") || entry.ends_with("mkv") || entry.ends_with("mov") {
-            videos.push(path.path());
+            videos.push(path.path().to_owned());
             continue;
         }
         if entry.ends_with("zip") || entry.ends_with("rar") || entry.ends_with("7z") {
-            compressed.push(path.path());
+            compressed.push(path.path().to_owned());
             continue;
         }
         if entry.ends_with("pdf") || entry.ends_with("html") || entry.ends_with("docx") {
-            docs.push(path.path());
+            docs.push(path.path().to_owned());
             continue;
         }
-        misls.push(path.path());
+        misls.push(path.path().to_owned());
     }
+    println!("operation completed!");
     match fs::remove_dir_all(&args[2]) {
         Ok(_) => {}
         Err(_) => {}
@@ -81,7 +82,7 @@ fn main() -> std::io::Result<()> {
                 fs::copy(
                     video.to_string_lossy().to_string(),
                     format!(
-                        "{}/img/{}",
+                        "{}/video/{}",
                         &args[2],
                         video.file_name().unwrap().to_string_lossy()
                     ),
