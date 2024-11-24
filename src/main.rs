@@ -58,42 +58,42 @@ fn main() -> std::io::Result<()> {
     fs::create_dir(format!("{}/compressed", &args[2]))?;
     fs::create_dir(format!("{}/miscellaneous", &args[2]))?;
     let mut process = vec![];
-    process.push(thread::spawn({
-        let args = Arc::clone(&args);
-        move || {
-            for img in images.iter() {
+    for img in images {
+        process.push(thread::spawn({
+            let args = Arc::clone(&args);
+            move || {
                 fs::copy(
                     img.to_string_lossy().to_string(),
                     format!(
                         "{}/img/{}",
-                        &args[2], // Access args safely
+                        &args[2],
                         img.file_name().unwrap().to_string_lossy()
                     ),
                 )
-                .unwrap(); // Handle errors properly in real code
+                .unwrap();
             }
-        }
-    }));
-    process.push(thread::spawn({
-        let args = Arc::clone(&args);
-        move || {
-            for video in videos.iter() {
+        }));
+    }
+    for video in videos {
+        process.push(thread::spawn({
+            let args = Arc::clone(&args);
+            move || {
                 fs::copy(
                     video.to_string_lossy().to_string(),
                     format!(
-                        "{}/video/{}",
+                        "{}/img/{}",
                         &args[2],
                         video.file_name().unwrap().to_string_lossy()
                     ),
                 )
                 .unwrap();
             }
-        }
-    }));
-    process.push(thread::spawn({
-        let args = Arc::clone(&args);
-        move || {
-            for txt in text.iter() {
+        }));
+    }
+    for txt in text {
+        process.push(thread::spawn({
+            let args = Arc::clone(&args);
+            move || {
                 fs::copy(
                     txt.to_string_lossy().to_string(),
                     format!(
@@ -104,12 +104,12 @@ fn main() -> std::io::Result<()> {
                 )
                 .unwrap();
             }
-        }
-    }));
-    process.push(thread::spawn({
-        let args = Arc::clone(&args);
-        move || {
-            for misl in misls.iter() {
+        }));
+    }
+    for misl in misls {
+        process.push(thread::spawn({
+            let args = Arc::clone(&args);
+            move || {
                 fs::copy(
                     misl.to_string_lossy().to_string(),
                     format!(
@@ -117,14 +117,15 @@ fn main() -> std::io::Result<()> {
                         &args[2],
                         misl.file_name().unwrap().to_string_lossy()
                     ),
-                ).unwrap();
+                )
+                .unwrap();
             }
-        }
-    }));
-    process.push(thread::spawn({
-        let args = Arc::clone(&args);
-        move || {
-            for comp in compressed {
+        }));
+    }
+    for comp in compressed {
+        process.push(thread::spawn({
+            let args = Arc::clone(&args);
+            move || {
                 fs::copy(
                     comp.to_string_lossy().to_string(),
                     format!(
@@ -132,10 +133,11 @@ fn main() -> std::io::Result<()> {
                         &args[2],
                         comp.file_name().unwrap().to_string_lossy()
                     ),
-                ).unwrap();
+                )
+                .unwrap();
             }
-        }
-    }));
+        }));
+    }
     for pro in process {
         pro.join().unwrap();
     }
